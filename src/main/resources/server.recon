@@ -1,0 +1,52 @@
+@kernel(class: "swim.meta.MetaKernel")
+@kernel(class: "swim.service.web.UiRouter")
+
+provisions: {
+  @provision("consumer") {
+    class: "nstream.adapter.common.provision.PropertiesProvision",
+    use: {"consumer.properties", "secret.properties"}
+  }
+}
+
+"nstream-cflt-bike": @fabric {
+  @plane(class: "swim.api.plane.AbstractPlane")
+  @node {
+    uri: "/consumer"
+    # Replace the following line with @agent(class: "nstream.adapter.confluent.ConfluentIngestingPatch") {
+    #   for a roughly equivalent no-code implementation
+    @agent(class: "nstream.cflt.bike.AvroConsumerAgent") {
+      confluentIngressConf: @kafkaIngressSettings {
+        consumerPropertiesProvisionName: "consumer"
+        topics: {"station_online"}
+        valueMolder: @valueAssembler("nstream.adapter.avro.GenericRecordAssembler")
+        relaySchema: @command($value) {
+          nodeUri: "/station/$name"
+          laneUri: "addEvent"
+        }
+      }
+    }
+  }
+  @node {
+    uri: "/station/:id"
+    @agent(class: "nstream.adapter.common.patches.LatestValuePatch")
+    @agent(class: "nstream.adapter.geo.GeoPointPatch") {
+      extractValueFromEvent: $availability_ratio
+      extractLongitude:$longitude  # extract the latitude field
+      extractLatitude:$latitude   # extract the longitude field
+    }
+  }
+
+  @node {
+    pattern: "/map/:tile"
+    @agent(class: "nstream.adapter.geo.MapTilePatch")
+  }
+}
+
+
+@web(port: 9001) {
+  space: "nstream-cflt-bike"
+  @websocket {
+    serverCompressionLevel: 0# -1 = default; 0 = off; 1-9 = deflate level
+    clientCompressionLevel: 0# -1 = default; 0 = off; 1-9 = deflate level
+  }
+}

@@ -1,0 +1,22 @@
+# Build system workdirs
+.gradle
+
+# Editors/IDEs
+.idea
+*.iml
+.vscode
+
+# Build outputs
+build/
+out/
+bin/
+# FIXME: enable if we ever fix the UI build
+#node_modules/
+#dist/
+
+# UI miscellany
+ui/dist/nstream-cflt-bike*
+ui/lib
+
+# MacOS
+.DS_Store
